@@ -12,7 +12,8 @@ import { OBJLoader } from './OBJLoader.js';
 import { OrbitControls } from './OrbitControls.js';
 import { GLTFLoader } from './GLTFLoader.js';
 
-function setup() {
+function setup()
+{
     // Check WebGL Version
     if (!WEBGL.isWebGL2Available()) {
         document.body.appendChild(WEBGL.getWebGL2ErrorMessage());
@@ -40,7 +41,8 @@ function setup() {
     controls.autoRotate = false;
 
     // Update projection matrix based on the windows size.
-    function resize() {
+    function resize()
+    {
         renderer.setSize(window.innerWidth, window.innerHeight);
         camera.aspect = window.innerWidth / window.innerHeight;
         camera.updateProjectionMatrix();
@@ -90,20 +92,42 @@ function setup() {
     };
 }
 
-async function loadGLTFAsync(files, postLoading) {
-    //TODO: implement this function to load the GLB model
-}
-
-async function loadOBJAsync(files, postLoading) {
+async function loadGLTFAsync(files, postLoading)
+{
+    //! part 1 a: Load the glTF armadillo model.
     const manager = new THREE.LoadingManager();
-    manager.onProgress = function (item, loaded, total) {
-        console.log("loading manager log: ", item, loaded, total);
+    manager.onProgress = function (item, loaded, total)
+    {
+        console.log("loading manager log [loadGLTFAsync]: ", item, loaded, total);
     };
 
-    const onProgress = function (xhr) {
+    const onProgress = function (xhr)
+    {
         if (xhr.lengthComputable) {
             const percentComplete = xhr.loaded / xhr.total * 100.0;
-            console.log(Math.round(percentComplete, 2) + '% downloaded');
+            console.log(Math.round(percentComplete, 2) + '% downloaded [loadGLTFAsync]');
+        }
+    };
+
+    const loader = new GLTFLoader(manager);
+    const models = await Promise.all(files.map(file => loader.loadAsync(file, onProgress)));
+    postLoading(models);
+    //! part 1 a: Load the glTF armadillo model.
+}
+
+async function loadOBJAsync(files, postLoading)
+{
+    const manager = new THREE.LoadingManager();
+    manager.onProgress = function (item, loaded, total)
+    {
+        console.log("loading manager log [loadOBJAsync]: ", item, loaded, total);
+    };
+
+    const onProgress = function (xhr)
+    {
+        if (xhr.lengthComputable) {
+            const percentComplete = xhr.loaded / xhr.total * 100.0;
+            console.log(Math.round(percentComplete, 2) + '% downloaded [loadOBJAsync]');
         }
     };
     const loader = new OBJLoader(manager);
@@ -111,4 +135,4 @@ async function loadOBJAsync(files, postLoading) {
     postLoading(models);
 }
 
-export {setup, loadGLTFAsync, loadOBJAsync};
+export { setup, loadGLTFAsync, loadOBJAsync };

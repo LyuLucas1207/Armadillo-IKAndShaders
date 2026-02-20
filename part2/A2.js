@@ -7,6 +7,9 @@ import { setup, loadGLTFAsync, loadOBJAsync } from './js/setup.js';
 import * as THREE from './js/three.module.js';
 import { SourceLoader } from './js/SourceLoader.js';
 import { THREEx } from './js/KeyboardState.js';
+import { initModel, traverseSkeleton, cloneGloveWithMaterial } from './utils/modelHelpers.js';
+import { distanceTo, DistanceStore } from './utils/distance.js';
+import { createEye, updateOneLaser } from './utils/eyeHelpers.js';
 
 // Setup and return the scene and related objects.
 // You should look into js/setup.js to see what exactly is done here.
@@ -32,13 +35,21 @@ const sphereOffset = { type: 'v3', value: new THREE.Vector3(0.0, 1.0, 0.0) };
 
 // The following constants are provided as reference values. Feel free to adjust them.
 // Distance threshold beyond which the armadillo should shoot lasers at the sphere (needed for Part e).
-const LaserDistance = 10.0;
+const LaserDistance = 15.0;
 
 // Distance threshold for waving frequency modulation (needed for Part b).
-const waveDistance = 10.0;
+const waveDistance = 12.0;
 
 // Base frequency of armadillo waving its hand (needed for Part b).
 const waveFreqBase = 1.0;
+
+//! part 1 b: Angry Boxing Gloves
+const sphereToArmadilloDist = new DistanceStore(Infinity);
+//! part 1 e: Laser eyes
+const sphereToLeftEyeDist = new DistanceStore(Infinity);
+//! part 1 e: Laser eyes
+const sphereToRightEyeDist = new DistanceStore(Infinity);
+
 
 // Sphere max size when hit by lasers (needed for Part f).
 const sphereMaxSize = 5.0;
@@ -49,6 +60,11 @@ const sphereGrowSpeed = 3.5;
 // Color transition speed (needed for Part f).
 const colorSpeed = 0.8;
 
+//! part 1 f: Grow the ball
+const sphereBaseColor = new THREE.Color(0xffff00);
+const sphereHitColor = new THREE.Color(0xff6600);
+let sphereScale = 1.0;
+
 // Diffuse texture map (this defines the main colors of the boxing glove)
 const gloveColorMap = new THREE.TextureLoader().load('images/boxing_gloves_texture.png');
 
@@ -58,8 +74,15 @@ const boxingGloveMaterial = new THREE.MeshStandardMaterial({
 
 const eyeMaterial = new THREE.ShaderMaterial();
 
-// TODO: Create a material for the laser (needed for Part e).
-// You can use MeshStandardMaterial like the sphere, or a ShaderMaterial like the eyes.
+//! part 1 e: Laser eyes
+const laserRadius = 0.08;
+const laserGeometry = new THREE.CylinderGeometry(laserRadius, laserRadius, 1.0, 16);
+const laserMaterial = new THREE.MeshBasicMaterial({
+  color: 0xff3333,
+  transparent: true,
+  opacity: 0.9,
+});
+//! part 1 e: Laser eyes
 
 // Load shaders.
 const shaderFiles = [
@@ -67,7 +90,8 @@ const shaderFiles = [
   'glsl/eye.fs.glsl',
 ];
 
-new SourceLoader().load(shaderFiles, function (shaders) {
+new SourceLoader().load(shaderFiles, function (shaders)
+{
   eyeMaterial.vertexShader = shaders['glsl/eye.vs.glsl'];
   eyeMaterial.fragmentShader = shaders['glsl/eye.fs.glsl'];
 });
@@ -75,15 +99,63 @@ new SourceLoader().load(shaderFiles, function (shaders) {
 // PART A & B ---------------------------------------------------------------------------------
 // Load Armadillo Model in GLTF format and attach Boxing Gloves
 //
-// TODO: Load and place the Armadillo's geometry in GLB format.
-//       First, fill in the loadGLTFAsync() function in js/setup.js.
-//       Then, call loadGLTFAsync() here with a post-loading callback.
-//
-// TODO: Load the boxing gloves (obj/boxing_glove.obj) using loadOBJAsync().
-//       Attach them to the appropriate wrist bones of the armadillo.
-//
-// HINT: Traverse the model to find THREE.SkinnedMesh and access its skeleton.
-//       Relevant bone names: "Forearm_L", "Forearm_R", "Wrist_L", "Wrist_R"
+// Armadillo (glTF) — loaded in post-loading callback; reference kept for later parts.
+//! part 1 a: Load the glTF armadillo model.
+let armadillo = null;
+const floorY = -0.0;  // same as floor.position.y in setup.js
+
+//! part 1 a: Load the glTF armadillo model.
+
+//! part 1 b: Angry Boxing Gloves.
+// Forearm bones for hand waving animation (Part b).
+let forearmL = null; //中文：左前臂
+let forearmR = null; //中文：右前臂
+let wristL = null; //中文：左腕
+let wristR = null; //中文：右腕
+
+const FOREARM_L = "Forearm_L";
+const FOREARM_R = "Forearm_R";
+const WRIST_L = "Wrist_L";
+const WRIST_R = "Wrist_R";
+const gloveScale = 1.4;
+
+function loadGloves(wristL, wristR, gloveScale, material)
+{
+  loadOBJAsync(['obj/boxing_glove.obj'], function (gloveModels)
+  {
+    const gloveTemplate = gloveModels[0];
+    if (!gloveTemplate) return;
+    const leftGlove = cloneGloveWithMaterial(gloveTemplate, material);
+    initModel(leftGlove, wristL, gloveScale, (box) => ({ x: 0.5, y: 1.0, z: -0.5 }), () => ({ x: 0, y: -Math.PI / 2, z: -Math.PI / 2 * 1 }));
+    const rightGlove = cloneGloveWithMaterial(gloveTemplate, material);
+    initModel(rightGlove, wristR, -gloveScale, (box) => ({ x: -0.3, y: 1.2, z: -0.5 }), () => ({ x: 0, y: -Math.PI / 2 * 1.6, z: Math.PI / 2 * 0.5 }));
+  });
+}
+//! part 1 b: Angry Boxing Gloves.
+
+loadGLTFAsync(['glb/armadillo.glb'], function (gltfModels)
+{
+  //! part 1 a: Load the glTF armadillo model.
+  const gltf = gltfModels[0];
+  if (!gltf) return;
+  armadillo = gltf.scene;
+  initModel(armadillo, scene, 0.1, (box) => ({ x: 0, y: floorY - box.min.y, z: 0 }), (b) => ({ x: 0, y: -Math.PI, z: 0 }));
+  //! part 1 a: Load the glTF armadillo model.
+
+  //! part 1 b: Angry Boxing Gloves.
+  // based on the skeleton, get the forearm and wrist bones
+  let skeleton = traverseSkeleton(armadillo);
+  if (!skeleton) return;
+  forearmL = skeleton.getBoneByName(FOREARM_L);
+  forearmR = skeleton.getBoneByName(FOREARM_R);
+  wristL = skeleton.getBoneByName(WRIST_L);
+  wristR = skeleton.getBoneByName(WRIST_R);
+  if (!wristL || !wristR) return;
+
+  // Load boxing gloves and attach to wrists.
+  loadGloves(wristL, wristR, gloveScale, boxingGloveMaterial);
+  //! part 1 b: Angry Boxing Gloves.
+});
 // --------------------------------------------------------------------------------------------
 
 
@@ -107,39 +179,67 @@ scene.add(sphereLight);
 const eyeGeometry = new THREE.SphereGeometry(1.0, 32, 32);
 const eyeScale = 0.5;
 
-const leftEyeSocket = new THREE.Object3D();
-const leftEyeSocketPos = new THREE.Vector3(0, 4.0, 0);  // TODO: Adjust position to place on armadillo's face
-leftEyeSocket.position.copy(leftEyeSocketPos);
-
-const leftEye = new THREE.Mesh(eyeGeometry, eyeMaterial);
-leftEye.scale.copy(new THREE.Vector3(eyeScale, eyeScale, eyeScale));
-leftEyeSocket.add(leftEye);
-
+//! part 1 c: Armadillos have Eyes.
+const { socket: leftEyeSocket } = createEye(eyeGeometry, eyeMaterial, eyeScale, { x: -0.9, y: 12.1, z: 2.8 });
 scene.add(leftEyeSocket);
-
-// TODO: Create the right eye similarly and add it to the scene.
+const { socket: rightEyeSocket } = createEye(eyeGeometry, eyeMaterial, eyeScale, { x: 0.9, y: 12.1, z: 2.8 });
+scene.add(rightEyeSocket);
+//! part 1 c: Armadillos have Eyes.
 // --------------------------------------------------------------------------------------------
 
 
 // PART D -------------------------------------------------------------------------------------
-// Make the eyes look at the sphere
-//
-// TODO: Create a function to update eye orientations so they look at the sphere.
-// HINT: THREE.Object3D has a lookAt() method.
+//! part 1 d: Staring at the sphere
+function updateEyesLookAt(targetPosition)
+{
+  // look at the target position
+  leftEyeSocket.lookAt(targetPosition);
+  rightEyeSocket.lookAt(targetPosition);
+}
+//! part 1 d: Staring at the sphere
 // --------------------------------------------------------------------------------------------
 
 
 // PART E -------------------------------------------------------------------------------------
-// Create laser beams from eyes to sphere
-//
-// TODO: Create laser geometry and meshes. Attach them to the eyes.
-// HINT: THREE.CylinderGeometry can be used for the laser beam shape.
+//! part 1 e: Laser eyes — 两条从双眼到小球的激光（世界空间长度与朝向）
+const leftLaser = new THREE.Mesh(laserGeometry, laserMaterial);
+const rightLaser = new THREE.Mesh(laserGeometry, laserMaterial);
+leftLaser.visible = false;
+rightLaser.visible = false;
+scene.add(leftLaser);
+scene.add(rightLaser);
+
+const eyePos = new THREE.Vector3();
+const spherePosLaser = new THREE.Vector3();
+const dirLaser = new THREE.Vector3();
+
+function updateLasers()
+{
+  scene.updateMatrixWorld(true);
+  spherePosLaser.copy(sphereOffset.value); // get the world position of the sphere
+
+  const distToLeftEye = sphereToLeftEyeDist.get();
+  if (distToLeftEye < LaserDistance) {
+    updateOneLaser(leftEyeSocket, leftLaser, spherePosLaser, eyePos, dirLaser);
+  } else {
+    leftLaser.visible = false;
+  }
+
+  const distToRightEye = sphereToRightEyeDist.get();
+  if (distToRightEye < LaserDistance) {
+    updateOneLaser(rightEyeSocket, rightLaser, spherePosLaser, eyePos, dirLaser);
+  } else {
+    rightLaser.visible = false;
+  }
+}
+//! part 1 e: Laser eyes — 两条从双眼到小球的激光（世界空间长度与朝向）
 // --------------------------------------------------------------------------------------------
 
 
 // Listen to keyboard events.
 const keyboard = new THREEx.KeyboardState();
-function checkKeyboard() {
+function checkKeyboard()
+{
   if (keyboard.pressed("W"))
     sphereOffset.value.z -= 0.1;
   else if (keyboard.pressed("S"))
@@ -155,31 +255,67 @@ function checkKeyboard() {
   else if (keyboard.pressed("Q"))
     sphereOffset.value.y += 0.1;
 
-  // TODO: Calculate distance from eyes to sphere for laser activation (Part e).
+  // 每帧实时更新小球与犰狳位置，并计算距离（用于 Part b 挥手速度、Part e 激光等）
+  sphereLight.position.set(sphereOffset.value.x, sphereOffset.value.y, sphereOffset.value.z);
+  sphere.position.set(sphereOffset.value.x, sphereOffset.value.y, sphereOffset.value.z);
+  if (armadillo) {
+    armadillo.updateMatrixWorld(true);
+    const spherePos = new THREE.Vector3(sphereOffset.value.x, sphereOffset.value.y, sphereOffset.value.z);
+    sphereToArmadilloDist.set(distanceTo(spherePos, armadillo));
+  }
 
-  // TODO: Update laser visibility and scale based on distance (Part e).
+  //! part 1 e: Laser eyes
+  updateLasers();
+  const spherePosForEyes = new THREE.Vector3(sphereOffset.value.x, sphereOffset.value.y, sphereOffset.value.z);
+  sphereToLeftEyeDist.set(distanceTo(spherePosForEyes, leftEyeSocket));
+  sphereToRightEyeDist.set(distanceTo(spherePosForEyes, rightEyeSocket));
+  //! part 1 e: Laser eyes
 
-  // TODO: Update sphere size and color when hit by lasers (Part f).
-  // HINT: Use THREE.Color.lerp() to interpolate between colors.
+  //! part 1 f: Grow the ball
+  const isHitByLaser = leftLaser.visible || rightLaser.visible;
+  // get the delta time, clock.getDelta() is the time since the last frame
+  const dt = Math.min(clock.getDelta(), 0.1);
+  if (isHitByLaser) {
+    sphereScale = Math.min(sphereMaxSize, sphereScale + sphereGrowSpeed * dt);
+    sphereMaterial.emissive.lerp(sphereHitColor, colorSpeed * dt);
+  } else {
+    sphereScale = Math.max(1.0, sphereScale - sphereGrowSpeed * dt);
+    sphereMaterial.emissive.lerp(sphereBaseColor, colorSpeed * dt);
+  }
+  sphere.scale.setScalar(sphereScale);
+  //! part 1 f: Grow the ball
 
   // The following tells three.js that some uniforms might have changed.
   sphereMaterial.needsUpdate = true;
   eyeMaterial.needsUpdate = true;
 
-  // TODO: Call your eye update function here to make eyes track the sphere (Part d).
-
-  // Move the sphere light in the scene. This allows the floor to reflect the light as it moves.
-  sphereLight.position.set(sphereOffset.value.x, sphereOffset.value.y, sphereOffset.value.z);
-  sphere.position.set(sphereOffset.value.x, sphereOffset.value.y, sphereOffset.value.z);
+  //! part 1 d: Staring at the sphere
+  // type of sphereOffset.value is THREE.Vector3
+  // so we need to convert it to a THREE.Vector3
+  const spherePosition = new THREE.Vector3(sphereOffset.value.x, sphereOffset.value.y, sphereOffset.value.z);
+  updateEyesLookAt(spherePosition);
+  //! part 1 d: Staring at the sphere
 }
 
 
 // Setup update callback
-function update() {
+function update()
+{
   checkKeyboard();
 
-  // TODO: Implement armadillo hand waving animation (Part b).
-  // HINT: Modify the rotation of the forearm bones using a periodic function.
+  //! part 1 b: Angry Boxing Gloves — 用 DistanceStore.get()，球越近挥得越快（放大频率差异使变化更明显）
+  if (forearmL && forearmR && wristL && wristR) {
+    const dist = sphereToArmadilloDist.get();
+    // frequency from 1x to 6x, change very fast when close
+    // if dist > waveDistance, t = 0, if dist < waveDistance, t = 1 - dist / waveDistance
+    // angle = 2 * Math.PI * frequency * time; frequency = waveFreqBase * (1 + 5 * (Math.max(0, 1 - dist / waveDistance)))
+    const angle = 2 * Math.PI * (waveFreqBase * (1 + 5 * (Math.max(0, 1 - dist / waveDistance)))) * clock.getElapsedTime();
+    const amplitude = 0.6;
+    wristL.rotation.z = amplitude * Math.sin(angle);
+    forearmL.rotation.z = amplitude * Math.sin(angle);
+    forearmR.rotation.z = amplitude * Math.sin(angle);
+  }
+  //! part 1 b: Angry Boxing Gloves.
 
   // Requests the next update call, this creates a loop
   requestAnimationFrame(update);

@@ -50,10 +50,17 @@ const sphereToLeftEyeDist = new DistanceStore(Infinity);
 //! part 1 e: Laser eyes
 const sphereToRightEyeDist = new DistanceStore(Infinity);
 
-//! part 1 f: Grow the ball
+
+// Sphere max size when hit by lasers (needed for Part f).
 const sphereMaxSize = 5.0;
+
+// Sphere growth speed (needed for Part f).
 const sphereGrowSpeed = 3.5;
+
+// Color transition speed (needed for Part f).
 const colorSpeed = 0.8;
+
+//! part 1 f: Grow the ball
 const sphereBaseColor = new THREE.Color(0xffff00);
 const sphereHitColor = new THREE.Color(0xff6600);
 let sphereScale = 1.0;
@@ -264,8 +271,9 @@ function checkKeyboard()
   sphereToRightEyeDist.set(distanceTo(spherePosForEyes, rightEyeSocket));
   //! part 1 e: Laser eyes
 
-  //! part 1 f: Grow the ball — 被激光击中时放大并缓慢变色（Color.lerp）
+  //! part 1 f: Grow the ball
   const isHitByLaser = leftLaser.visible || rightLaser.visible;
+  // get the delta time, clock.getDelta() is the time since the last frame
   const dt = Math.min(clock.getDelta(), 0.1);
   if (isHitByLaser) {
     sphereScale = Math.min(sphereMaxSize, sphereScale + sphereGrowSpeed * dt);
@@ -275,6 +283,7 @@ function checkKeyboard()
     sphereMaterial.emissive.lerp(sphereBaseColor, colorSpeed * dt);
   }
   sphere.scale.setScalar(sphereScale);
+  //! part 1 f: Grow the ball
 
   // The following tells three.js that some uniforms might have changed.
   sphereMaterial.needsUpdate = true;
