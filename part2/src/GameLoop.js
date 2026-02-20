@@ -1,9 +1,6 @@
 import * as THREE from '../js/three.module.js';
 import { updateOneLaser } from './models/eyeHelpers.js';
 
-const EYE_OFFSET_LEFT = new THREE.Vector3(-0.9, 12.1, 2.8);
-const EYE_OFFSET_RIGHT = new THREE.Vector3(0.9, 12.1, 2.8);
-const AXIS_Y = new THREE.Vector3(0, 1, 0);
 const WAVE_DISTANCE = 12.0;
 const WAVE_FREQ_BASE = 1.0;
 const WAVE_AMPLITUDE = 0.6;
@@ -82,21 +79,6 @@ export class GameLoop {
           if (this.gameState.applyBoundaryPenalty()) this.ui.showGameOverMessage();
         }
         k.syncToGroup(arm.group);
-      }
-
-      if (arm.leftEyeSocket && arm.rightEyeSocket && arm.group) {
-        const basePos = pos || k.getArmadilloPosition();
-        const ry = arm.group.rotation.y;
-        arm.leftEyeSocket.position.set(
-          basePos.x + EYE_OFFSET_LEFT.x * Math.cos(ry) - EYE_OFFSET_LEFT.z * Math.sin(ry),
-          basePos.y + EYE_OFFSET_LEFT.y,
-          basePos.z + EYE_OFFSET_LEFT.x * Math.sin(ry) + EYE_OFFSET_LEFT.z * Math.cos(ry)
-        );
-        arm.rightEyeSocket.position.set(
-          basePos.x + EYE_OFFSET_RIGHT.x * Math.cos(ry) - EYE_OFFSET_RIGHT.z * Math.sin(ry),
-          basePos.y + EYE_OFFSET_RIGHT.y,
-          basePos.z + EYE_OFFSET_RIGHT.x * Math.sin(ry) + EYE_OFFSET_RIGHT.z * Math.cos(ry)
-        );
       }
 
       if (arm.armadillo) arm.armadillo.updateMatrixWorld(true);
