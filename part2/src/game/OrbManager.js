@@ -3,6 +3,7 @@ import {
   LASER_FIRE_DURATION_MS,
   ORB_GROW_DURATION_MS,
   ORB_GROW_MAX_SCALE,
+  LASER_LOCK_MAX_DISTANCE,
 } from '../constants/GameConstants.js';
 
 export class OrbManager {
@@ -64,6 +65,7 @@ export class OrbManager {
     armadilloGroup.getWorldPosition(this.armadilloWorldPos);
     this.nearestOrbIndex = -1;
     let minDistSq = Infinity;
+    const maxDistSq = LASER_LOCK_MAX_DISTANCE * LASER_LOCK_MAX_DISTANCE;
     for (let i = 0; i < orbs.length; i++) {
       const o = orbs[i];
       if (o.hitState !== null) continue;
@@ -71,14 +73,14 @@ export class OrbManager {
       const dy = o.mesh.position.y - this.armadilloWorldPos.y;
       const dz = o.mesh.position.z - this.armadilloWorldPos.z;
       const dSq = dx * dx + dy * dy + dz * dz;
-      if (dSq < minDistSq) {
+      if (dSq < minDistSq && dSq <= maxDistSq) {
         minDistSq = dSq;
         this.nearestOrbIndex = i;
       }
     }
     this.distToNearest = minDistSq === Infinity ? Infinity : Math.sqrt(minDistSq);
 
-    const hasNearest = this.nearestOrbIndex >= 0 && orbs[this.nearestOrbIndex].hitState === null;
+    const hasNearest = this.nearestOrbIndex >= 0 && this.distToNearest <= LASER_LOCK_MAX_DISTANCE;
     if (hasNearest) {
       const o = orbs[this.nearestOrbIndex];
       this.targetMarker.visible = true;
@@ -95,17 +97,17 @@ export class OrbManager {
 
   tryFireLaser(keyboard) {
     const orbs = this.getOrbs();
-    if (
-      keyboard.pressed('I') &&
-      !this.laserFiring &&
+    const hasLockedTarget =
       this.nearestOrbIndex >= 0 &&
-      orbs[this.nearestOrbIndex].hitState === null
-    ) {
+      this.distToNearest <= LASER_LOCK_MAX_DISTANCE &&
+      orbs[this.nearestOrbIndex].hitState === null;
+    if (keyboard.pressed('I') && !this.laserFiring && hasLockedTarget) {
+      const targetOrb = orbs[this.nearestOrbIndex];
       this.laserFiring = true;
       this.laserFireEndTime = performance.now() + LASER_FIRE_DURATION_MS;
-      this.laserTargetPos.copy(orbs[this.nearestOrbIndex].mesh.position);
-      orbs[this.nearestOrbIndex].hitState = 'growing';
-      orbs[this.nearestOrbIndex].growStartTime = performance.now();
+      this.laserTargetPos.copy(targetOrb.mesh.position);
+      targetOrb.hitState = 'growing';
+      targetOrb.growStartTime = performance.now();
     }
   }
 

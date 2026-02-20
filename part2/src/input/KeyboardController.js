@@ -28,8 +28,8 @@ export class KeyboardController {
 
   handleRotation(armadilloGroup) {
     if (!armadilloGroup) return;
-    if (this.keyboard.pressed('J')) armadilloGroup.rotation.y -= this.rotationSpeed;
-    else if (this.keyboard.pressed('L')) armadilloGroup.rotation.y += this.rotationSpeed;
+    if (this.keyboard.pressed('J')) armadilloGroup.rotation.y += this.rotationSpeed;
+    else if (this.keyboard.pressed('L')) armadilloGroup.rotation.y -= this.rotationSpeed;
   }
 
   handleJump() {
