@@ -1,12 +1,12 @@
 /*
  * UBC CPSC 314 2025W2
- * Assignment 2 — 距离计算（世界空间）与通用距离存储.
+ * Assignment 2 — Distance utilities (world space) and shared distance store.
  */
 
 import * as THREE from '../js/three.module.js';
 
 /**
- * 通用距离存储：可在每帧 set，在别处 get，便于多处共享同一距离值.
+ * Shared distance store: set each frame, get elsewhere; allows multiple consumers to share one value.
  */
 export class DistanceStore {
   constructor(initial = Infinity) {
@@ -21,8 +21,11 @@ export class DistanceStore {
 }
 
 /**
- * 世界空间一点到单个 Object3D 的距离（用其世界位置）.
- * 调用前父链应先 updateMatrixWorld(true) 以保证正确.
+ * Distance from a point in world space to a single Object3D (uses its world position).
+ * Call updateMatrixWorld(true) on the parent chain before calling for correct results.
+ * @param {THREE.Vector3} point - Point in world space
+ * @param {THREE.Object3D} object - Object to measure distance to
+ * @returns {number} Distance, or Infinity if object is null
  */
 export function distanceTo(point, object) {
   if (!object) return Infinity;
@@ -32,8 +35,11 @@ export function distanceTo(point, object) {
 }
 
 /**
- * 世界空间一点到多个 Object3D 的最近距离.
- * 调用前相关父物体应先 updateMatrixWorld(true).
+ * Minimum distance from a point in world space to any of the given Object3Ds.
+ * Call updateMatrixWorld(true) on relevant parents before calling.
+ * @param {THREE.Vector3} point - Point in world space
+ * @param {...THREE.Object3D} objects - Objects to measure distances to
+ * @returns {number} Minimum distance
  */
 export function minDistanceTo(point, ...objects) {
   const temp = new THREE.Vector3();

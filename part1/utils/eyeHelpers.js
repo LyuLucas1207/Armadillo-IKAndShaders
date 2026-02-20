@@ -1,16 +1,16 @@
 /*
  * UBC CPSC 314 2025W2
- * Assignment 2 — 通用眼球创建.
+ * Assignment 2 — Eye creation and laser update helpers.
  */
 
 import * as THREE from '../js/three.module.js';
 
 /**
- * 创建一只眼球：socket（Object3D）+ 其子 mesh，便于统一挂到 scene 并设置位置.
- * @param {THREE.BufferGeometry} geometry - 眼球几何
- * @param {THREE.Material} material - 眼球材质
- * @param {number} scale - 缩放
- * @param {{x: number, y: number, z: number}} position - 位置
+ * Creates one eye: an Object3D socket with a child mesh for placement in the scene.
+ * @param {THREE.BufferGeometry} geometry - Eye geometry
+ * @param {THREE.Material} material - Eye material
+ * @param {number} scale - Scale factor
+ * @param {{x: number, y: number, z: number}} position - Position of the socket
  * @returns {{ socket: THREE.Object3D, eye: THREE.Mesh }}
  */
 export function createEye(geometry, material, scale, position) {
@@ -26,13 +26,13 @@ export function createEye(geometry, material, scale, position) {
 const vecY = new THREE.Vector3(0, 1, 0);
 
 /**
- * 更新单条眼激光：从 eyeSocket 指向 spherePos，设置 laserMesh 的位置、长度与朝向.
- * 复用 eyePos、dir 避免每帧分配；若眼与球几乎重合（len < 1e-6）则隐藏激光.
- * @param {THREE.Object3D} eyeSocket - 眼 socket（取世界位置）
- * @param {THREE.Mesh} laserMesh - 激光 mesh（CylinderGeometry 高度 1，沿 Y）
- * @param {THREE.Vector3} spherePos - 小球世界位置
- * @param {THREE.Vector3} eyePos - 临时向量，用于写出眼世界位置
- * @param {THREE.Vector3} dir - 临时向量，用于眼→球方向
+ * Updates one eye laser: from eyeSocket toward spherePos; sets laserMesh position, length, and orientation.
+ * Reuses eyePos and dir to avoid per-frame allocation; hides laser if eye and sphere are nearly coincident (len < 1e-6).
+ * @param {THREE.Object3D} eyeSocket - Eye socket (world position is used)
+ * @param {THREE.Mesh} laserMesh - Laser mesh (CylinderGeometry height 1, aligned to Y)
+ * @param {THREE.Vector3} spherePos - Sphere position in world space
+ * @param {THREE.Vector3} eyePos - Scratch vector for eye world position
+ * @param {THREE.Vector3} dir - Scratch vector for eye-to-sphere direction
  */
 export function updateOneLaser(eyeSocket, laserMesh, spherePos, eyePos, dir) {
   eyeSocket.getWorldPosition(eyePos);

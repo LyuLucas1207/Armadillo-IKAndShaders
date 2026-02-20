@@ -106,12 +106,11 @@ const floorY = -0.0;  // same as floor.position.y in setup.js
 
 //! part 1 a: Load the glTF armadillo model.
 
-//! part 1 b: Angry Boxing Gloves.
-// Forearm bones for hand waving animation (Part b).
-let forearmL = null; //中文：左前臂
-let forearmR = null; //中文：右前臂
-let wristL = null; //中文：左腕
-let wristR = null; //中文：右腕
+// Forearm and wrist bones for hand waving animation (Part b).
+let forearmL = null;
+let forearmR = null;
+let wristL = null;
+let wristR = null;
 
 const FOREARM_L = "Forearm_L";
 const FOREARM_R = "Forearm_R";
@@ -119,6 +118,13 @@ const WRIST_L = "Wrist_L";
 const WRIST_R = "Wrist_R";
 const gloveScale = 1.4;
 
+/**
+ * Loads boxing gloves from OBJ and attaches them to the given wrist bones.
+ * @param {THREE.Bone} wristL - Left wrist bone
+ * @param {THREE.Bone} wristR - Right wrist bone
+ * @param {number} gloveScale - Scale for the gloves
+ * @param {THREE.Material} material - Material for the gloves
+ */
 function loadGloves(wristL, wristR, gloveScale, material)
 {
   loadOBJAsync(['obj/boxing_glove.obj'], function (gloveModels)
@@ -189,10 +195,12 @@ scene.add(rightEyeSocket);
 
 
 // PART D -------------------------------------------------------------------------------------
-//! part 1 d: Staring at the sphere
+/**
+ * Orients both eyes to look at the given target position.
+ * @param {THREE.Vector3} targetPosition - World-space position to look at
+ */
 function updateEyesLookAt(targetPosition)
 {
-  // look at the target position
   leftEyeSocket.lookAt(targetPosition);
   rightEyeSocket.lookAt(targetPosition);
 }
@@ -201,7 +209,7 @@ function updateEyesLookAt(targetPosition)
 
 
 // PART E -------------------------------------------------------------------------------------
-//! part 1 e: Laser eyes — 两条从双眼到小球的激光（世界空间长度与朝向）
+// Two lasers from eyes to sphere (world-space length and orientation).
 const leftLaser = new THREE.Mesh(laserGeometry, laserMaterial);
 const rightLaser = new THREE.Mesh(laserGeometry, laserMaterial);
 leftLaser.visible = false;
@@ -213,6 +221,9 @@ const eyePos = new THREE.Vector3();
 const spherePosLaser = new THREE.Vector3();
 const dirLaser = new THREE.Vector3();
 
+/**
+ * Updates laser visibility and geometry: draws lasers from eyes to sphere when within LaserDistance.
+ */
 function updateLasers()
 {
   scene.updateMatrixWorld(true);
@@ -232,12 +243,16 @@ function updateLasers()
     rightLaser.visible = false;
   }
 }
-//! part 1 e: Laser eyes — 两条从双眼到小球的激光（世界空间长度与朝向）
+//! part 1 e: Laser eyes — two lasers from eyes to sphere (world-space length and orientation).
 // --------------------------------------------------------------------------------------------
 
 
 // Listen to keyboard events.
 const keyboard = new THREEx.KeyboardState();
+
+/**
+ * Handles keyboard input: moves sphere (WASD, Q/E), updates distances for waving and lasers, updates laser state, sphere growth, and eye lookAt.
+ */
 function checkKeyboard()
 {
   if (keyboard.pressed("W"))
@@ -255,7 +270,7 @@ function checkKeyboard()
   else if (keyboard.pressed("Q"))
     sphereOffset.value.y += 0.1;
 
-  // 每帧实时更新小球与犰狳位置，并计算距离（用于 Part b 挥手速度、Part e 激光等）
+  // Update sphere and armadillo positions each frame and compute distances (for Part b waving speed, Part e lasers, etc.)
   sphereLight.position.set(sphereOffset.value.x, sphereOffset.value.y, sphereOffset.value.z);
   sphere.position.set(sphereOffset.value.x, sphereOffset.value.y, sphereOffset.value.z);
   if (armadillo) {
@@ -290,20 +305,21 @@ function checkKeyboard()
   eyeMaterial.needsUpdate = true;
 
   //! part 1 d: Staring at the sphere
-  // type of sphereOffset.value is THREE.Vector3
-  // so we need to convert it to a THREE.Vector3
+  // sphereOffset.value is THREE.Vector3; convert to Vector3 for lookAt
   const spherePosition = new THREE.Vector3(sphereOffset.value.x, sphereOffset.value.y, sphereOffset.value.z);
   updateEyesLookAt(spherePosition);
   //! part 1 d: Staring at the sphere
 }
 
 
-// Setup update callback
+/**
+ * Main update loop: keyboard, hand waving (frequency increases as sphere gets closer), render.
+ */
 function update()
 {
   checkKeyboard();
 
-  //! part 1 b: Angry Boxing Gloves — 用 DistanceStore.get()，球越近挥得越快（放大频率差异使变化更明显）
+  //! part 1 b: Angry Boxing Gloves — use DistanceStore.get(); wave faster as sphere gets closer.
   if (forearmL && forearmR && wristL && wristR) {
     const dist = sphereToArmadilloDist.get();
     // frequency from 1x to 6x, change very fast when close

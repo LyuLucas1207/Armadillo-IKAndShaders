@@ -1,12 +1,18 @@
 /*
  * UBC CPSC 314 2025W2
- * Assignment 2 — 模型/骨骼/手套：放置、遍历骨骼、克隆手套.
+ * Assignment 2 — Model, skeleton, and glove helpers: placement, skeleton traversal, glove clone.
  */
 
 import * as THREE from '../js/three.module.js';
 
 /**
- * 将模型放入父节点并按 getPosition 定位（可选 floorY 贴地）.
+ * Adds the model to the parent and positions it using getPosition (optional floorY for ground alignment).
+ * @param {THREE.Object3D} model - Model to place
+ * @param {THREE.Object3D} parent - Parent to add the model to
+ * @param {number} scale - Uniform scale
+ * @param {function} getPosition - (box) => { x, y, z } or null for default
+ * @param {function} getRotation - (box) => { x, y, z } or null
+ * @param {number} floorY - Optional floor Y for default placement
  */
 export function initModel(model, parent, scale, getPosition, getRotation, floorY = 0) {
   if (!model) return;
@@ -22,7 +28,11 @@ export function initModel(model, parent, scale, getPosition, getRotation, floorY
   model.rotation.set(r.x, r.y, r.z);
 }
 
-/** 从 glTF 场景中取 SkinnedMesh 的 skeleton，找不到返回 null. */
+/**
+ * Finds the skeleton from a glTF scene by traversing for SkinnedMesh; returns null if not found.
+ * @param {THREE.Object3D} armadillo - Root of the glTF scene
+ * @returns {THREE.Skeleton|null}
+ */
 export function traverseSkeleton(armadillo) {
   let skeleton = null;
   armadillo.traverse(function (child) {
@@ -31,7 +41,12 @@ export function traverseSkeleton(armadillo) {
   return skeleton;
 }
 
-/** 克隆手套并统一材质. */
+/**
+ * Clones the glove mesh and applies the given material to all meshes in the clone.
+ * @param {THREE.Object3D} gloveTemplate - Source glove model
+ * @param {THREE.Material} material - Material to apply
+ * @returns {THREE.Object3D} Cloned glove with material
+ */
 export function cloneGloveWithMaterial(gloveTemplate, material) {
   const g = gloveTemplate.clone();
   g.traverse(function (child) {
