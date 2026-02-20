@@ -9,7 +9,7 @@ import { SourceLoader } from './js/SourceLoader.js';
 import { THREEx } from './js/KeyboardState.js';
 import { initModel, traverseSkeleton, cloneGloveWithMaterial } from './utils/modelHelpers.js';
 import { distanceTo, DistanceStore } from './utils/distance.js';
-import { createEye } from './utils/eyeHelpers.js';
+import { createEye, updateOneLaser } from './utils/eyeHelpers.js';
 
 // Setup and return the scene and related objects.
 // You should look into js/setup.js to see what exactly is done here.
@@ -35,25 +35,28 @@ const sphereOffset = { type: 'v3', value: new THREE.Vector3(0.0, 1.0, 0.0) };
 
 // The following constants are provided as reference values. Feel free to adjust them.
 // Distance threshold beyond which the armadillo should shoot lasers at the sphere (needed for Part e).
-const LaserDistance = 10.0;
+const LaserDistance = 15.0;
 
 // Distance threshold for waving frequency modulation (needed for Part b).
-const waveDistance = 10.0;
+const waveDistance = 12.0;
 
 // Base frequency of armadillo waving its hand (needed for Part b).
 const waveFreqBase = 1.0;
 
-// 每帧在 checkKeyboard 里 set、挥手/激光等处 get 的通用距离（Part b / Part e）
+//! part 1 b: Angry Boxing Gloves
 const sphereToArmadilloDist = new DistanceStore(Infinity);
+//! part 1 e: Laser eyes
+const sphereToLeftEyeDist = new DistanceStore(Infinity);
+//! part 1 e: Laser eyes
+const sphereToRightEyeDist = new DistanceStore(Infinity);
 
-// Sphere max size when hit by lasers (needed for Part f).
+//! part 1 f: Grow the ball
 const sphereMaxSize = 5.0;
-
-// Sphere growth speed (needed for Part f).
 const sphereGrowSpeed = 3.5;
-
-// Color transition speed (needed for Part f).
 const colorSpeed = 0.8;
+const sphereBaseColor = new THREE.Color(0xffff00);
+const sphereHitColor = new THREE.Color(0xff6600);
+let sphereScale = 1.0;
 
 // Diffuse texture map (this defines the main colors of the boxing glove)
 const gloveColorMap = new THREE.TextureLoader().load('images/boxing_gloves_texture.png');
@@ -180,9 +183,10 @@ scene.add(rightEyeSocket);
 
 // PART D -------------------------------------------------------------------------------------
 //! part 1 d: Staring at the sphere
-function updateEyesLookAt(targetPosition) {
+function updateEyesLookAt(targetPosition)
+{
   // look at the target position
-  leftEyeSocket.lookAt(targetPosition); 
+  leftEyeSocket.lookAt(targetPosition);
   rightEyeSocket.lookAt(targetPosition);
 }
 //! part 1 d: Staring at the sphere
@@ -198,36 +202,28 @@ rightLaser.visible = false;
 scene.add(leftLaser);
 scene.add(rightLaser);
 
-const _eyePos = new THREE.Vector3();
-const _spherePos = new THREE.Vector3();
-const _dir = new THREE.Vector3();
+const eyePos = new THREE.Vector3();
+const spherePosLaser = new THREE.Vector3();
+const dirLaser = new THREE.Vector3();
 
-function updateLasers() {
+function updateLasers()
+{
   scene.updateMatrixWorld(true);
-  const distToArmadillo = sphereToArmadilloDist.get();
-  if (distToArmadillo >= LaserDistance) {
-    leftLaser.visible = false;
-    rightLaser.visible = false;
-    return;
-  }
-  leftEyeSocket.getWorldPosition(_eyePos);
-  _spherePos.set(sphereOffset.value.x, sphereOffset.value.y, sphereOffset.value.z);
-  _dir.subVectors(_spherePos, _eyePos);
-  const lenL = _dir.length();
-  if (lenL < 1e-6) return;
-  leftLaser.visible = true;
-  leftLaser.position.lerpVectors(_eyePos, _spherePos, 0.5);
-  leftLaser.scale.set(1, lenL, 1);
-  leftLaser.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), _dir.clone().normalize());
+  spherePosLaser.copy(sphereOffset.value); // get the world position of the sphere
 
-  rightEyeSocket.getWorldPosition(_eyePos);
-  _dir.subVectors(_spherePos, _eyePos);
-  const lenR = _dir.length();
-  if (lenR < 1e-6) return;
-  rightLaser.visible = true;
-  rightLaser.position.lerpVectors(_eyePos, _spherePos, 0.5);
-  rightLaser.scale.set(1, lenR, 1);
-  rightLaser.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), _dir.clone().normalize());
+  const distToLeftEye = sphereToLeftEyeDist.get();
+  if (distToLeftEye < LaserDistance) {
+    updateOneLaser(leftEyeSocket, leftLaser, spherePosLaser, eyePos, dirLaser);
+  } else {
+    leftLaser.visible = false;
+  }
+
+  const distToRightEye = sphereToRightEyeDist.get();
+  if (distToRightEye < LaserDistance) {
+    updateOneLaser(rightEyeSocket, rightLaser, spherePosLaser, eyePos, dirLaser);
+  } else {
+    rightLaser.visible = false;
+  }
 }
 //! part 1 e: Laser eyes — 两条从双眼到小球的激光（世界空间长度与朝向）
 // --------------------------------------------------------------------------------------------
@@ -261,11 +257,24 @@ function checkKeyboard()
     sphereToArmadilloDist.set(distanceTo(spherePos, armadillo));
   }
 
-  //! part 1 e: 球距 < LaserDistance 时显示并更新两条眼激光（世界空间长度）
+  //! part 1 e: Laser eyes
   updateLasers();
+  const spherePosForEyes = new THREE.Vector3(sphereOffset.value.x, sphereOffset.value.y, sphereOffset.value.z);
+  sphereToLeftEyeDist.set(distanceTo(spherePosForEyes, leftEyeSocket));
+  sphereToRightEyeDist.set(distanceTo(spherePosForEyes, rightEyeSocket));
+  //! part 1 e: Laser eyes
 
-  // TODO: Update sphere size and color when hit by lasers (Part f).
-  // HINT: Use THREE.Color.lerp() to interpolate between colors.
+  //! part 1 f: Grow the ball — 被激光击中时放大并缓慢变色（Color.lerp）
+  const isHitByLaser = leftLaser.visible || rightLaser.visible;
+  const dt = Math.min(clock.getDelta(), 0.1);
+  if (isHitByLaser) {
+    sphereScale = Math.min(sphereMaxSize, sphereScale + sphereGrowSpeed * dt);
+    sphereMaterial.emissive.lerp(sphereHitColor, colorSpeed * dt);
+  } else {
+    sphereScale = Math.max(1.0, sphereScale - sphereGrowSpeed * dt);
+    sphereMaterial.emissive.lerp(sphereBaseColor, colorSpeed * dt);
+  }
+  sphere.scale.setScalar(sphereScale);
 
   // The following tells three.js that some uniforms might have changed.
   sphereMaterial.needsUpdate = true;
@@ -291,7 +300,7 @@ function update()
     // frequency from 1x to 6x, change very fast when close
     // if dist > waveDistance, t = 0, if dist < waveDistance, t = 1 - dist / waveDistance
     // angle = 2 * Math.PI * frequency * time; frequency = waveFreqBase * (1 + 5 * (Math.max(0, 1 - dist / waveDistance)))
-    const angle = 2 * Math.PI * (waveFreqBase * (1 + 3 * (Math.max(0, 1 - dist / waveDistance)))) * clock.getElapsedTime();
+    const angle = 2 * Math.PI * (waveFreqBase * (1 + 5 * (Math.max(0, 1 - dist / waveDistance)))) * clock.getElapsedTime();
     const amplitude = 0.6;
     wristL.rotation.z = amplitude * Math.sin(angle);
     forearmL.rotation.z = amplitude * Math.sin(angle);
