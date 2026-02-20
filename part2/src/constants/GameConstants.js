@@ -2,6 +2,7 @@ export const ORB_COUNT = 10;
 export const SCORE_PER_ORB = 100;
 export const BOUNDARY_PENALTY = 200;
 export const LASER_LOCK_MAX_DISTANCE = 20;
+export const LASER_LOCK_FOV_DEG = 160;
 export const ARMADILLO_MOVE_SPEED = 0.25;
 export const ROTATION_SPEED = 0.05;
 export const JUMP_FORCE = 0.8;

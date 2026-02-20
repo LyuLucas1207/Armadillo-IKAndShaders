@@ -4,6 +4,7 @@ import {
   ORB_GROW_DURATION_MS,
   ORB_GROW_MAX_SCALE,
   LASER_LOCK_MAX_DISTANCE,
+  LASER_LOCK_FOV_DEG,
 } from '../constants/GameConstants.js';
 
 export class OrbManager {
@@ -16,6 +17,9 @@ export class OrbManager {
     this.nearestOrbIndex = -1;
     this.armadilloWorldPos = new THREE.Vector3();
     this.distToNearest = Infinity;
+    this._forwardDir = new THREE.Vector3();
+    this._toOrb = new THREE.Vector3();
+    this._axisY = new THREE.Vector3(0, 1, 0);
 
     const g = new THREE.RingGeometry(1.2, 1.5, 32);
     const m = new THREE.MeshBasicMaterial({
@@ -66,14 +70,23 @@ export class OrbManager {
     this.nearestOrbIndex = -1;
     let minDistSq = Infinity;
     const maxDistSq = LASER_LOCK_MAX_DISTANCE * LASER_LOCK_MAX_DISTANCE;
+    const halfFovRad = (LASER_LOCK_FOV_DEG / 2) * (Math.PI / 180);
+    const cosHalfFov = Math.cos(halfFovRad);
+    this._forwardDir.set(0, 0, 1).applyAxisAngle(this._axisY, armadilloGroup.rotation.y);
     for (let i = 0; i < orbs.length; i++) {
       const o = orbs[i];
       if (o.hitState !== null) continue;
-      const dx = o.mesh.position.x - this.armadilloWorldPos.x;
-      const dy = o.mesh.position.y - this.armadilloWorldPos.y;
-      const dz = o.mesh.position.z - this.armadilloWorldPos.z;
-      const dSq = dx * dx + dy * dy + dz * dz;
-      if (dSq < minDistSq && dSq <= maxDistSq) {
+      this._toOrb.set(
+        o.mesh.position.x - this.armadilloWorldPos.x,
+        o.mesh.position.y - this.armadilloWorldPos.y,
+        o.mesh.position.z - this.armadilloWorldPos.z
+      );
+      const dSq = this._toOrb.lengthSq();
+      if (dSq > maxDistSq) continue;
+      if (dSq >= 1e-10) this._toOrb.normalize();
+      else continue;
+      const dot = this._forwardDir.dot(this._toOrb);
+      if (dot >= cosHalfFov && dSq < minDistSq) {
         minDistSq = dSq;
         this.nearestOrbIndex = i;
       }
