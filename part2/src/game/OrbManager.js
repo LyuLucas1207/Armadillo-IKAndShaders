@@ -40,6 +40,24 @@ export class OrbManager {
     this.nearestOrbIndex = -1;
   }
 
+  updateOrbBounce(currentTime) {
+    const orbs = this.getOrbs();
+    const t = currentTime * 0.001;
+    const TWO_PI = Math.PI * 2;
+    for (let i = 0; i < orbs.length; i++) {
+      const o = orbs[i];
+      if (o.hitState !== null) continue;
+      const phase = o.jumpPhase + t * o.jumpSpeed * TWO_PI;
+      const cycle = Math.floor(phase / TWO_PI);
+      if (cycle > o.lastJumpCycle) {
+        o.currentJumpAmplitude = o.jumpAmplitudeMin + Math.random() * (o.jumpAmplitudeMax - o.jumpAmplitudeMin);
+        o.lastJumpCycle = cycle;
+      }
+      const offset = o.currentJumpAmplitude * Math.abs(Math.sin(phase));
+      o.mesh.position.y = o.basePosition.y + offset;
+    }
+  }
+
   findNearestAndUpdateMarker(armadilloGroup) {
     const orbs = this.getOrbs();
     if (!armadilloGroup) return;
@@ -62,9 +80,11 @@ export class OrbManager {
 
     const hasNearest = this.nearestOrbIndex >= 0 && orbs[this.nearestOrbIndex].hitState === null;
     if (hasNearest) {
+      const o = orbs[this.nearestOrbIndex];
       this.targetMarker.visible = true;
-      this.targetMarker.position.x = orbs[this.nearestOrbIndex].mesh.position.x;
-      this.targetMarker.position.z = orbs[this.nearestOrbIndex].mesh.position.z;
+      this.targetMarker.position.x = o.mesh.position.x;
+      this.targetMarker.position.y = o.mesh.position.y + 0.5;
+      this.targetMarker.position.z = o.mesh.position.z;
     } else {
       this.targetMarker.visible = false;
     }

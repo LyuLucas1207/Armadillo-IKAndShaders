@@ -84,6 +84,7 @@ export class GameLoop {
       if (arm.armadillo) arm.armadillo.updateMatrixWorld(true);
       this.scene.updateMatrixWorld(true);
 
+      this.orbManager.updateOrbBounce(now);
       this.orbManager.findNearestAndUpdateMarker(arm.group);
       if (arm.sphereToArmadilloDist) arm.sphereToArmadilloDist.set(this.orbManager.getDistToNearest());
       this.orbManager.tryFireLaser(k.keyboard);
