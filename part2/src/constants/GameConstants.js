@@ -1,0 +1,9 @@
+export const ORB_COUNT = 10;
+export const SCORE_PER_ORB = 100;
+export const BOUNDARY_PENALTY = 200;
+export const ARMADILLO_MOVE_SPEED = 0.25;
+export const ROTATION_SPEED = 0.05;
+export const JUMP_FORCE = 0.8;
+export const LASER_FIRE_DURATION_MS = 400;
+export const ORB_GROW_DURATION_MS = 500;
+export const ORB_GROW_MAX_SCALE = 2.5;

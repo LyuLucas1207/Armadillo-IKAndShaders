@@ -1,13 +1,10 @@
 /*
  * UBC CPSC 314 2025W2
- * Assignment 2 — 模型/骨骼/手套：放置、遍历骨骼、克隆手套.
+ * 模型/骨骼/手套：放置、遍历骨骼、克隆手套
  */
 
-import * as THREE from '../js/three.module.js';
+import * as THREE from '../../js/three.module.js';
 
-/**
- * 将模型放入父节点并按 getPosition 定位（可选 floorY 贴地）.
- */
 export function initModel(model, parent, scale, getPosition, getRotation, floorY = 0) {
   if (!model) return;
   model.scale.setScalar(scale);
@@ -22,7 +19,6 @@ export function initModel(model, parent, scale, getPosition, getRotation, floorY
   model.rotation.set(r.x, r.y, r.z);
 }
 
-/** 从 glTF 场景中取 SkinnedMesh 的 skeleton，找不到返回 null. */
 export function traverseSkeleton(armadillo) {
   let skeleton = null;
   armadillo.traverse(function (child) {
@@ -31,7 +27,6 @@ export function traverseSkeleton(armadillo) {
   return skeleton;
 }
 
-/** 克隆手套并统一材质. */
 export function cloneGloveWithMaterial(gloveTemplate, material) {
   const g = gloveTemplate.clone();
   g.traverse(function (child) {

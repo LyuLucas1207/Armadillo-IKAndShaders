@@ -2,20 +2,82 @@
 
 <head>
   <meta charset="UTF-8">
-  <title>CPSC 314 Assignment 2 2025WT2</title>
+  <title>CPSC 314 Assignment 2 Part2 — Laser Orb Game</title>
   <style>
     body {
-      /* Remove the default padding and margin around the canvas */
       padding: 0;
       margin: 0;
-      /* Disable scrolling */
       overflow: hidden;
+      font-family: Arial, sans-serif;
     }
+    #gameUI {
+      position: absolute;
+      top: 20px;
+      left: 20px;
+      color: white;
+      text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
+      z-index: 100;
+    }
+    #score { font-size: 24px; font-weight: bold; margin-bottom: 10px; }
+    #timer { font-size: 18px; margin-bottom: 10px; }
+    #progress { font-size: 16px; }
+    #victoryMessage {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      color: #FFD700;
+      font-size: 48px;
+      font-weight: bold;
+      text-shadow: 3px 3px 6px rgba(0, 0, 0, 0.9);
+      z-index: 200;
+      display: none;
+      text-align: center;
+    }
+    #gameOverMessage {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      color: #FF4444;
+      font-size: 48px;
+      font-weight: bold;
+      text-shadow: 3px 3px 6px rgba(0, 0, 0, 0.9);
+      z-index: 200;
+      display: none;
+      text-align: center;
+    }
+    #startButton {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      padding: 20px 40px;
+      font-size: 32px;
+      font-weight: bold;
+      background-color: #4CAF50;
+      color: white;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+      z-index: 200;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+    }
+    #startButton:hover { background-color: #45a049; }
+    #startButton.hidden { display: none; }
   </style>
 </head>
 
 <body>
   <canvas id="webglcanvas"></canvas>
+  <div id="gameUI">
+    <div id="score">Score: <span id="scoreValue">0</span></div>
+    <div id="timer">Time: <span id="timerValue">0.0</span>s</div>
+    <div id="progress">Orbs Destroyed: <span id="collectedCount">0</span> / <span id="totalCount">0</span></div>
+  </div>
+  <button id="startButton">Start Game</button>
+  <div id="victoryMessage">Victory!</div>
+  <div id="gameOverMessage">Game Over!</div>
   <script src="js/WebGL.js"></script>
   <script type="module" src="js/three.module.js"></script>
   <script type="module" src="js/setup.js"></script>

@@ -1,0 +1,127 @@
+import * as THREE from '../../js/three.module.js';
+import {
+  LASER_FIRE_DURATION_MS,
+  ORB_GROW_DURATION_MS,
+  ORB_GROW_MAX_SCALE,
+} from '../constants/GameConstants.js';
+
+export class OrbManager {
+  constructor(orbCollection, scene) {
+    this.orbCollection = orbCollection;
+    this.scene = scene;
+    this.laserFiring = false;
+    this.laserFireEndTime = 0;
+    this.laserTargetPos = new THREE.Vector3();
+    this.nearestOrbIndex = -1;
+    this.armadilloWorldPos = new THREE.Vector3();
+    this.distToNearest = Infinity;
+
+    const g = new THREE.RingGeometry(1.2, 1.5, 32);
+    const m = new THREE.MeshBasicMaterial({
+      color: 0xff0000,
+      side: THREE.DoubleSide,
+      transparent: true,
+      opacity: 0.9,
+    });
+    this.targetMarker = new THREE.Mesh(g, m);
+    this.targetMarker.rotation.x = -Math.PI / 2;
+    this.targetMarker.position.y = 1.8;
+    this.targetMarker.visible = false;
+    scene.add(this.targetMarker);
+  }
+
+  getOrbs() {
+    return this.orbCollection.getOrbs();
+  }
+
+  reset() {
+    this.orbCollection.reset();
+    this.laserFiring = false;
+    this.nearestOrbIndex = -1;
+  }
+
+  findNearestAndUpdateMarker(armadilloGroup) {
+    const orbs = this.getOrbs();
+    if (!armadilloGroup) return;
+    armadilloGroup.getWorldPosition(this.armadilloWorldPos);
+    this.nearestOrbIndex = -1;
+    let minDistSq = Infinity;
+    for (let i = 0; i < orbs.length; i++) {
+      const o = orbs[i];
+      if (o.hitState !== null) continue;
+      const dx = o.mesh.position.x - this.armadilloWorldPos.x;
+      const dy = o.mesh.position.y - this.armadilloWorldPos.y;
+      const dz = o.mesh.position.z - this.armadilloWorldPos.z;
+      const dSq = dx * dx + dy * dy + dz * dz;
+      if (dSq < minDistSq) {
+        minDistSq = dSq;
+        this.nearestOrbIndex = i;
+      }
+    }
+    this.distToNearest = minDistSq === Infinity ? Infinity : Math.sqrt(minDistSq);
+
+    const hasNearest = this.nearestOrbIndex >= 0 && orbs[this.nearestOrbIndex].hitState === null;
+    if (hasNearest) {
+      this.targetMarker.visible = true;
+      this.targetMarker.position.x = orbs[this.nearestOrbIndex].mesh.position.x;
+      this.targetMarker.position.z = orbs[this.nearestOrbIndex].mesh.position.z;
+    } else {
+      this.targetMarker.visible = false;
+    }
+    for (let i = 0; i < orbs.length; i++) {
+      orbs[i].material.emissiveIntensity = i === this.nearestOrbIndex && hasNearest ? 1.4 : 0.8;
+    }
+  }
+
+  tryFireLaser(keyboard) {
+    const orbs = this.getOrbs();
+    if (
+      keyboard.pressed('I') &&
+      !this.laserFiring &&
+      this.nearestOrbIndex >= 0 &&
+      orbs[this.nearestOrbIndex].hitState === null
+    ) {
+      this.laserFiring = true;
+      this.laserFireEndTime = performance.now() + LASER_FIRE_DURATION_MS;
+      this.laserTargetPos.copy(orbs[this.nearestOrbIndex].mesh.position);
+      orbs[this.nearestOrbIndex].hitState = 'growing';
+      orbs[this.nearestOrbIndex].growStartTime = performance.now();
+    }
+  }
+
+  updateGrowth(currentTime) {
+    const collectedEvents = [];
+    const orbs = this.getOrbs();
+    for (let i = 0; i < orbs.length; i++) {
+      const o = orbs[i];
+      if (o.hitState !== 'growing') continue;
+      const elapsed = currentTime - o.growStartTime;
+      const progress = Math.min(elapsed / ORB_GROW_DURATION_MS, 1.0);
+      o.scale = 1 + (ORB_GROW_MAX_SCALE - 1) * progress;
+      o.mesh.scale.setScalar(o.scale);
+      if (progress >= 1.0) {
+        const landingPosition = new THREE.Vector3().copy(o.mesh.position);
+        o.mesh.visible = false;
+        o.hitState = 'exploded';
+        collectedEvents.push({ orbData: o, landingPosition });
+      }
+    }
+    return collectedEvents;
+  }
+
+  getLaserState(now) {
+    if (this.laserFiring && now < this.laserFireEndTime) {
+      return { firing: true, targetPos: this.laserTargetPos };
+    }
+    this.laserFiring = false;
+    return { firing: false, targetPos: this.laserTargetPos };
+  }
+
+  getDistToNearest() {
+    return this.distToNearest;
+  }
+
+  getArmadilloWorldPos() {
+    return this.armadilloWorldPos;
+  }
+}

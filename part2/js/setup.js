@@ -11,6 +11,7 @@ import * as THREE from './three.module.js';
 import { OBJLoader } from './OBJLoader.js';
 import { OrbitControls } from './OrbitControls.js';
 import { GLTFLoader } from './GLTFLoader.js';
+import { FLOOR_WIDTH, FLOOR_HEIGHT } from '../src/constants/FloorConstants.js';
 
 function setup()
 {
@@ -73,7 +74,7 @@ function setup()
         roughnessMap: floorRoughness,
         side: THREE.DoubleSide
     });
-    const floorGeometry = new THREE.PlaneGeometry(30.0, 30.0);
+    const floorGeometry = new THREE.PlaneGeometry(FLOOR_WIDTH, FLOOR_HEIGHT);
     const floor = new THREE.Mesh(floorGeometry, floorMaterial);
     floor.rotation.x = -Math.PI / 2.0;
     floor.position.y = -0.3;

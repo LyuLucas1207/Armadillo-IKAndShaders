@@ -19,14 +19,18 @@ This project demonstrates hierarchical transformations, skeleton rigging, and cu
 - **Custom Shaders**: GLSL vertex and fragment shaders for the eyes (in `glsl/eye.vs.glsl`, `glsl/eye.fs.glsl`)
 - **Interactive Controls**: Keyboard to move the sphere; orbit/pan/zoom for the camera
 
-### Part 2 Extended Features
-- **Feature Extension**: Additional creative features implemented in the `part2/` directory (see project structure and any part2-specific README for details)
+### Part 2 Extended Features (Part g)
+- **Extended floor**: Larger play area (80×80) for more movement
+- **Random orbs**: Multiple collectible orbs spawn at random positions on the floor
+- **WASD controls the armadillo**: Move the character (not the sphere) with W/A/S/D
+- **Nearest-orb marker**: The orb closest to the armadillo (by character distance) is highlighted (brighter emissive)
+- **Press I to fire laser**: Shoots lasers from the eyes at the **currently marked** (nearest) orb
+- **Orb hit: grow then explode**: When hit by the laser, the orb grows in size and then triggers a **particle explosion** (A1-style effect); the orb does not bounce
 
 ## 🎮 Controls
 
-- **W / S**: Move sphere forward / backward
-- **A / D**: Move sphere left / right
-- **Q / E**: Move sphere up / down
+- **Part 1**: **W / S / A / D**: Move sphere. **Q / E**: Move sphere up / down.
+- **Part 2**: **W / S / A / D**: Move the armadillo. **I**: Fire laser at the nearest (marked) orb.
 - **Left Mouse Drag**: Orbit camera around the scene
 - **Right Mouse Drag**: Pan camera
 - **Mouse Wheel**: Zoom in / out
