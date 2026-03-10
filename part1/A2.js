@@ -199,6 +199,7 @@ scene.add(rightEyeSocket);
  * Orients both eyes to look at the given target position.
  * @param {THREE.Vector3} targetPosition - World-space position to look at
  */
+//! part 1 d: Staring at the sphere
 function updateEyesLookAt(targetPosition)
 {
   leftEyeSocket.lookAt(targetPosition);
@@ -210,6 +211,7 @@ function updateEyesLookAt(targetPosition)
 
 // PART E -------------------------------------------------------------------------------------
 // Two lasers from eyes to sphere (world-space length and orientation).
+//! part 1 e: Laser eyes — two lasers from eyes to sphere (world-space length and orientation).
 const leftLaser = new THREE.Mesh(laserGeometry, laserMaterial);
 const rightLaser = new THREE.Mesh(laserGeometry, laserMaterial);
 leftLaser.visible = false;
@@ -224,6 +226,7 @@ const dirLaser = new THREE.Vector3();
 /**
  * Updates laser visibility and geometry: draws lasers from eyes to sphere when within LaserDistance.
  */
+
 function updateLasers()
 {
   scene.updateMatrixWorld(true);

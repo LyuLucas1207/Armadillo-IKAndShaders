@@ -2,6 +2,8 @@
 
 A WebGL-based 3D graphics project built with Three.js, featuring a rigged armadillo character with inverse kinematics, custom eye shaders, skeletal animation, and interactive laser and sphere effects.
 
+![Part 2 game](part2/images/game.png)
+
 ## 📋 Overview
 
 This project demonstrates hierarchical transformations, skeleton rigging, and custom GLSL shaders in WebGL. It uses a glTF rigged armadillo model with boxing gloves attached to the skeleton, googly eyes that track a moving sphere, laser beams when the sphere is close, and a sphere that grows and changes color when hit by the lasers. The project has two versions: a core implementation and an extended version with additional features.
@@ -26,6 +28,18 @@ This project demonstrates hierarchical transformations, skeleton rigging, and cu
 - **Nearest-orb marker**: The orb closest to the armadillo (by character distance) is highlighted (brighter emissive)
 - **Press I to fire laser**: Shoots lasers from the eyes at the **currently marked** (nearest) orb
 - **Orb hit: grow then explode**: When hit by the laser, the orb grows in size and then triggers a **particle explosion** (A1-style effect); the orb does not bounce
+
+## 📸 Screenshots (Part 2)
+
+| Normal (no laser, eyes default) | Laser firing at orb |
+|----------------------------------|----------------------|
+| ![Normal: no laser, eyeballs not enlarged](part2/images/normal.png) | ![Laser eyes](part2/images/laser.png) |
+
+| Game start (orbs, Start button) | Gameplay |
+|----------------------------------|----------|
+| ![Game](part2/images/game.png) | ![Gameplaying](part2/images/gameplaying.png) |
+
+**Normal** = eyes have no laser and the eyeballs are not enlarged (default idle state). When the sphere/orb is in range and you press **I**, the eyes fire lasers and the target orb grows then explodes.
 
 ## 🎮 Controls
 
